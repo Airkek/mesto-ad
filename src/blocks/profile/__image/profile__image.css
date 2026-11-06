@@ -1,4 +1,8 @@
 .profile__image {
+  padding: 0;
+  border: 0;
+  flex-shrink: 0;
+  background-color: transparent;
   width: 120px;
   height: 120px;
   border-radius: 50%;
@@ -22,6 +26,7 @@
 }
 
 .profile__image::before {
+  border-radius: 50%;
   background: rgba(0, 0, 0, 0);
   top: 0;
   right: 0;
@@ -40,11 +45,13 @@
   transform: translate(-50%, -50%);
 }
 
-.profile__image:hover::before {
+.profile__image:hover::before,
+.profile__image:focus-visible::before {
   background: rgba(0, 0, 0, 0.8);
 }
 
-.profile__image:hover::after {
+.profile__image:hover::after,
+.profile__image:focus-visible::after {
   opacity: 1;
 }
 

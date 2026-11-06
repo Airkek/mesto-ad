@@ -1,3 +1,7 @@
+.popup__content_content_info {
+    display: flex;
+    flex-direction: column;
+}
 
 @media screen and (max-width: 568px) {
     .popup__content_content_info {

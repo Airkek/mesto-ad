@@ -1,4 +1,6 @@
 .popup__list {
+    min-height: 0;
+    flex-shrink: 1;
     display: flex;
     flex-wrap: wrap;
     align-items: flex-start;
