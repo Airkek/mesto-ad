@@ -1,5 +1,4 @@
 const initialValues = new WeakMap();
-const namePattern = /^[a-zA-Zа-яА-ЯёЁ -]+$/;
 
 const showInputError = (formElement, inputElement, errorMessage, settings) => {
   const errorElement = formElement.querySelector(`#${inputElement.id}-error`);
@@ -20,8 +19,8 @@ const hideInputError = (formElement, inputElement, settings) => {
 const checkInputValidity = (formElement, inputElement, settings) => {
   inputElement.setCustomValidity("");
 
-  if (inputElement.dataset.validation === "name" && inputElement.value && !namePattern.test(inputElement.value)) {
-    inputElement.setCustomValidity(inputElement.dataset.errorMessage);
+  if (inputElement.validity.patternMismatch) {
+    inputElement.setCustomValidity(inputElement.dataset.errorMessage || inputElement.validationMessage);
   }
 
   if (!inputElement.validity.valid) {

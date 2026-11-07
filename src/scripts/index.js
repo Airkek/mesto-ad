@@ -54,7 +54,18 @@ const usersStatsModalUserList = usersStatsModalWindow.querySelector(".popup__lis
 const infoDefinitionTemplate = document.querySelector("#popup-info-definition-template").content;
 const userPreviewTemplate = document.querySelector("#popup-info-user-preview-template").content;
 const allPopups = document.querySelectorAll(".popup");
-const formStates = new Map();
+const formStates = new Map(
+  [profileForm, avatarForm, cardForm, removeForm].map((formElement) => {
+    const buttonElement = formElement.querySelector(".popup__button");
+    return [formElement, {
+      buttonElement,
+      inputElements: formElement.querySelectorAll(".popup__input"),
+      errorElement: formElement.querySelector(".popup__request-error"),
+      defaultText: buttonElement.textContent,
+      submitting: false,
+    }];
+  }),
+);
 let userId = "";
 let selectedCard = null;
 let statsLoading = false;
@@ -143,6 +154,10 @@ const renderUser = (userData) => {
 };
 
 const handlePreviewPicture = ({ name, link }) => {
+  if (document.querySelector(".popup_is-opened")) {
+    return;
+  }
+
   imageElement.src = link;
   imageElement.alt = name;
   imageCaption.textContent = name;
@@ -196,48 +211,40 @@ const prepareForm = (formElement, modalWindow, reset = true) => {
   openModalWindow(modalWindow);
 };
 
-const bindFormSubmit = (formElement, modalWindow, loadingText, sendRequest, onSuccess) => {
-  const buttonElement = formElement.querySelector(".popup__button");
-  const inputElements = formElement.querySelectorAll(".popup__input");
-  const errorElement = formElement.querySelector(".popup__request-error");
-  const defaultText = buttonElement.textContent;
-  const formState = { submitting: false, errorElement };
-  formStates.set(formElement, formState);
+const submitForm = (formElement, modalWindow, loadingText, sendRequest, onSuccess) => {
+  const formState = formStates.get(formElement);
+  const { buttonElement, inputElements, errorElement, defaultText } = formState;
+  if (formState.submitting || buttonElement.disabled || !formElement.checkValidity()) {
+    return;
+  }
 
-  formElement.addEventListener("submit", (event) => {
-    event.preventDefault();
-    if (formState.submitting || buttonElement.disabled || !formElement.checkValidity()) {
-      return;
-    }
-
-    formState.submitting = true;
-    errorElement.hidden = true;
-    buttonElement.disabled = true;
-    buttonElement.textContent = loadingText;
-    formElement.setAttribute("aria-busy", "true");
-    inputElements.forEach((inputElement) => {
-      inputElement.disabled = true;
-    });
-
-    sendRequest()
-      .then((data) => {
-        onSuccess(data);
-        closeModalWindow(modalWindow);
-      })
-      .catch((error) => {
-        errorElement.textContent = `Не удалось сохранить изменения. ${error.message}`;
-        errorElement.hidden = false;
-      })
-      .finally(() => {
-        formState.submitting = false;
-        buttonElement.disabled = false;
-        buttonElement.textContent = defaultText;
-        formElement.removeAttribute("aria-busy");
-        inputElements.forEach((inputElement) => {
-          inputElement.disabled = false;
-        });
-      });
+  formState.submitting = true;
+  errorElement.hidden = true;
+  buttonElement.disabled = true;
+  buttonElement.textContent = loadingText;
+  formElement.setAttribute("aria-busy", "true");
+  inputElements.forEach((inputElement) => {
+    inputElement.disabled = true;
   });
+
+  sendRequest()
+    .then((data) => {
+      onSuccess(data);
+      closeModalWindow(modalWindow);
+    })
+    .catch((error) => {
+      errorElement.textContent = `Не удалось сохранить изменения. ${error.message}`;
+      errorElement.hidden = false;
+    })
+    .finally(() => {
+      formState.submitting = false;
+      buttonElement.disabled = false;
+      buttonElement.textContent = defaultText;
+      formElement.removeAttribute("aria-busy");
+      inputElements.forEach((inputElement) => {
+        inputElement.disabled = false;
+      });
+    });
 };
 
 const loadPage = () => {
@@ -265,29 +272,46 @@ const loadPage = () => {
     });
 };
 
-bindFormSubmit(profileForm, profileFormModalWindow, "Сохранение…", () => {
-  return setUserInfo({
-    name: profileTitleInput.value,
-    about: profileDescriptionInput.value,
+const handleProfileFormSubmit = (event) => {
+  event.preventDefault();
+  submitForm(profileForm, profileFormModalWindow, "Сохранение…", () => {
+    return setUserInfo({
+      name: profileTitleInput.value,
+      about: profileDescriptionInput.value,
+    });
+  }, renderUser);
+};
+
+const handleAvatarFormSubmit = (event) => {
+  event.preventDefault();
+  submitForm(avatarForm, avatarFormModalWindow, "Сохранение…", () => {
+    return setUserAvatar(avatarInput.value);
+  }, renderUser);
+};
+
+const handleCardFormSubmit = (event) => {
+  event.preventDefault();
+  submitForm(cardForm, cardFormModalWindow, "Создание…", () => {
+    return addCard({ name: cardNameInput.value, link: cardLinkInput.value });
+  }, (cardData) => {
+    placesWrap.prepend(buildCard(cardData));
   });
-}, renderUser);
+};
 
-bindFormSubmit(avatarForm, avatarFormModalWindow, "Сохранение…", () => {
-  return setUserAvatar(avatarInput.value);
-}, renderUser);
+const handleRemoveFormSubmit = (event) => {
+  event.preventDefault();
+  submitForm(removeForm, removeModalWindow, "Удаление…", () => {
+    return removeCard(selectedCard.cardId);
+  }, () => {
+    deleteCard(selectedCard.cardElement);
+    selectedCard = null;
+  });
+};
 
-bindFormSubmit(cardForm, cardFormModalWindow, "Создание…", () => {
-  return addCard({ name: cardNameInput.value, link: cardLinkInput.value });
-}, (cardData) => {
-  placesWrap.prepend(buildCard(cardData));
-});
-
-bindFormSubmit(removeForm, removeModalWindow, "Удаление…", () => {
-  return removeCard(selectedCard.cardId);
-}, () => {
-  deleteCard(selectedCard.cardElement);
-  selectedCard = null;
-});
+profileForm.addEventListener("submit", handleProfileFormSubmit);
+avatarForm.addEventListener("submit", handleAvatarFormSubmit);
+cardForm.addEventListener("submit", handleCardFormSubmit);
+removeForm.addEventListener("submit", handleRemoveFormSubmit);
 
 openProfileFormButton.addEventListener("click", () => {
   if (formStates.get(profileForm).submitting) {
